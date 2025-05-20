@@ -1,0 +1,217 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Hiển thị và Trích xuất mã ảnh</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            padding: 20px;
+            line-height: 1.6;
+        }
+        .container {
+            max-width: 700px;
+            margin: auto;
+        }
+        #imagePreview {
+            display: block;
+            margin-top: 20px;
+            margin-bottom: 20px;
+            max-width: 100%;
+            max-height: 500px;
+            border: 1px solid #ccc;
+        }
+        label.file-label {
+            display: inline-block;
+            padding: 10px 15px;
+            background-color: #007bff;
+            color: white;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-bottom: 10px;
+        }
+        input[type="file"] {
+            display: none;
+        }
+        button {
+            padding: 10px 15px;
+            background-color: #28a745;
+            color: white;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            margin-right: 10px;
+        }
+        button:disabled {
+            background-color: #ccc;
+            cursor: not-allowed;
+        }
+        #base64Controls {
+            margin-top: 15px;
+        }
+        #base64TextArea {
+            width: 100%;
+            min-height: 100px;
+            margin-top: 10px;
+            padding: 10px;
+            box-sizing: border-box;
+            border: 1px solid #ddd;
+            border-radius: 5px;
+            font-family: monospace;
+            word-break: break-all;
+        }
+        .hidden {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>Chọn tệp để hiển thị ảnh</h1>
+        <p>Bạn có thể chọn một tệp hình ảnh trực tiếp (JPG, PNG, GIF, v.v.) hoặc một tệp văn bản (.txt) chứa mã Data URI của hình ảnh (ví dụ: <code>data:image/jpeg;base64,...</code>).</p>
+
+        <label for="fileInput" class="file-label">Chọn tệp bất kỳ</label>
+        <input type="file" id="fileInput">
+
+        <img id="imagePreview" src="#" alt="Xem trước ảnh" class="hidden">
+
+        <div id="base64Controls" class="hidden">
+            <button id="showBase64Button">Hiển thị mã Base64</button>
+            <button id="downloadBase64Button">Tải mã Base64 (.txt)</button>
+            <textarea id="base64TextArea" readonly class="hidden" placeholder="Mã Base64 của ảnh sẽ hiển thị ở đây..."></textarea>
+        </div>
+    </div>
+
+    <script>
+        const fileInput = document.getElementById('fileInput');
+        const imagePreview = document.getElementById('imagePreview');
+        const base64Controls = document.getElementById('base64Controls');
+        const showBase64Button = document.getElementById('showBase64Button');
+        const downloadBase64Button = document.getElementById('downloadBase64Button');
+        const base64TextArea = document.getElementById('base64TextArea');
+
+        let currentFullDataUri = null; // Để lưu trữ Data URI đầy đủ của ảnh hiện tại
+
+        function resetUI() {
+            imagePreview.src = "#";
+            imagePreview.classList.add('hidden');
+            base64Controls.classList.add('hidden');
+            base64TextArea.classList.add('hidden');
+            base64TextArea.value = '';
+            currentFullDataUri = null;
+        }
+
+        function handleImageError(message) {
+            resetUI();
+            if (message) {
+                alert(message);
+            }
+        }
+
+        function displayImageAndEnableControls(dataUri) {
+            imagePreview.src = dataUri;
+            imagePreview.classList.remove('hidden');
+            currentFullDataUri = dataUri;
+            base64Controls.classList.remove('hidden');
+            base64TextArea.classList.add('hidden'); // Ẩn textarea ban đầu
+            base64TextArea.value = '';
+        }
+
+        fileInput.addEventListener('change', function(event) {
+            resetUI(); // Reset giao diện mỗi khi chọn file mới
+            const file = event.target.files[0];
+
+            if (!file) {
+                return;
+            }
+
+            // Ưu tiên 1: Đọc trực tiếp dưới dạng Data URL (cho các file ảnh thông thường)
+            const imageReader = new FileReader();
+            imageReader.onload = function(e) {
+                displayImageAndEnableControls(e.target.result);
+            };
+
+            imageReader.onerror = function() {
+                // Nếu đọc trực tiếp thất bại, thử đọc dưới dạng text (cho file chứa Data URI)
+                tryReadAsTextDataURI(file);
+            };
+
+            // Gắn sự kiện onerror cho thẻ img để bắt lỗi nếu Data URI hợp lệ nhưng trình duyệt không render được
+            // hoặc nếu Data URI không phải là của hình ảnh.
+            imagePreview.onerror = function() {
+                // Nếu imagePreview.src không phải là '#' (tức là đã thử gán src)
+                // và currentFullDataUri chưa được set thành công bởi imageReader.onload
+                // (hoặc nếu đã set mà vẫn lỗi), thì thử đọc dạng text.
+                if (imagePreview.src !== window.location.href + "#" && !currentFullDataUri) {
+                     tryReadAsTextDataURI(file);
+                } else if (imagePreview.src !== window.location.href + "#") {
+                    // Đã thử gán src từ imageReader.onload nhưng vẫn lỗi render
+                    // điều này có thể xảy ra nếu file nhị phân không phải là ảnh hợp lệ
+                    handleImageError("Tệp được chọn có vẻ không phải là định dạng hình ảnh mà trình duyệt có thể hiển thị trực tiếp, hoặc tệp bị lỗi.");
+                }
+            };
+            imageReader.readAsDataURL(file);
+        });
+
+        function tryReadAsTextDataURI(fileToReadAsText) {
+            const textReader = new FileReader();
+            textReader.onload = function(e) {
+                const textContent = e.target.result;
+                // Kiểm tra xem nội dung có phải là Data URI hợp lệ cho ảnh không
+                if (typeof textContent === 'string' && textContent.startsWith('data:image/') && textContent.includes(';base64,')) {
+                    displayImageAndEnableControls(textContent);
+                } else {
+                    handleImageError("Tệp không phải là hình ảnh hợp lệ hoặc không chứa mã Data URI của hình ảnh.");
+                }
+            };
+            textReader.onerror = function() {
+                handleImageError("Không thể đọc tệp dưới dạng văn bản.");
+            };
+            textReader.readAsText(fileToReadAsText);
+        }
+
+        showBase64Button.addEventListener('click', function() {
+            if (currentFullDataUri) {
+                try {
+                    const base64Data = currentFullDataUri.split(',')[1];
+                    if (base64Data) {
+                        base64TextArea.value = base64Data;
+                        base64TextArea.classList.toggle('hidden'); // Bật/tắt hiển thị textarea
+                    } else {
+                        base64TextArea.value = "Không thể trích xuất dữ liệu Base64.";
+                        base64TextArea.classList.remove('hidden');
+                    }
+                } catch (e) {
+                    base64TextArea.value = "Lỗi khi xử lý Data URI.";
+                    base64TextArea.classList.remove('hidden');
+                }
+            }
+        });
+
+        downloadBase64Button.addEventListener('click', function() {
+            if (currentFullDataUri) {
+                try {
+                    const base64Data = currentFullDataUri.split(',')[1];
+                    if (base64Data) {
+                        const blob = new Blob([base64Data], { type: 'text/plain;charset=utf-8' });
+                        const url = URL.createObjectURL(blob);
+                        const a = document.createElement('a');
+                        a.href = url;
+                        a.download = 'ma_anh_base64.txt';
+                        document.body.appendChild(a);
+                        a.click();
+                        document.body.removeChild(a);
+                        URL.revokeObjectURL(url);
+                    } else {
+                        alert("Không có dữ liệu Base64 để tải xuống.");
+                    }
+                } catch (e) {
+                    alert("Lỗi khi chuẩn bị dữ liệu Base64 để tải xuống.");
+                }
+            }
+        });
+
+    </script>
+</body>
+</html>
