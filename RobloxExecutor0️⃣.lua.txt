@@ -3,10 +3,10 @@
 -- Added: ESP, Target Viewing, Position Following, Emergency Auto-Run
 
 -- Configuration (EDIT THESE VALUES)
-local KEY = "123456" -- Change this to your desired key
+local KEY = "1234567" -- Change this to your desired key
 local EXPIRATION_DATE = {
     Year = 2025,
-    Month = 0,
+    Month = 20,
     Day = 128,
     Hour = 0,
     Minute = 0,
