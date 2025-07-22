@@ -1,0 +1,88 @@
+<!DOCTYPE html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8">
+  <title>MiniGame Blogger</title>
+  <style>
+    body {
+      font-family: 'Segoe UI', sans-serif;
+      background: #f5f6fa;
+      color: #2f3640;
+      padding: 20px;
+    }
+    h1, h2 {
+      text-align: left;
+      color: #e84118;
+    }
+    .game {
+      background: #dcdde1;
+      padding: 20px;
+      border-radius: 10px;
+      margin: 20px 0;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+    }
+    .timer {
+      font-size: 16px;
+      margin: 10px 0;
+    }
+    input {
+      padding: 8px;
+      width: 100%;
+      margin-top: 5px;
+      border-radius: 5px;
+      border: 1px solid #ccc;
+    }
+    button {
+      background: #44bd32;
+      color: white;
+      border: none;
+      padding: 10px 15px;
+      margin-top: 10px;
+      border-radius: 5px;
+      cursor: pointer;
+    }
+    #color-sequence {
+      font-weight: bold;
+      margin-bottom: 10px;
+      font-size: 18px;
+    }
+  </style>
+</head>
+<body>
+
+  <h2 style="text-align: left;">Okno</h2>
+  <div>Hwlee</div>
+  <div><span style="font-size: x-large;">Oke</span></div>
+
+  <div class="game">
+    <h2>🎮 MiniGame 1: Ghi nhớ màu</h2>
+    <div id="color-sequence">Chuỗi màu sẽ hiển thị tại đây</div>
+    <input id="color-input" placeholder="Nhập chuỗi (VD: đỏ,xanh,vàng,tím)">
+    <button onclick="checkMemory()">Gửi</button>
+    <p id="game1-status"></p>
+  </div>
+
+  <script>
+    // Tạo chuỗi màu ngẫu nhiên
+    const colors = ["đỏ", "xanh", "vàng", "tím", "cam"];
+    const sequence = Array.from({ length: 4 }, () => colors[Math.floor(Math.random() * colors.length)]);
+    document.getElementById("color-sequence").innerText = "👉 " + sequence.join(", ");
+
+    function checkMemory() {
+      const input = document.getElementById('color-input').value
+        .toLowerCase()
+        .replace(/\s+/g, '')
+        .replace(/,/g, '');
+      const target = sequence.join('').toLowerCase();
+
+      if (input === target) {
+        document.getElementById('game1-status').innerText = "✅ Chính xác!";
+      } else {
+        document.getElementById('game1-status').innerText = "❌ Sai rồi! Chuỗi là: " + sequence.join(", ");
+        document.getElementById("color-sequence").innerText = "👉 " + sequence.join(", ");
+      }
+    }
+  </script>
+
+</body>
+</html>
